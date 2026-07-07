@@ -48,11 +48,17 @@ class User(AbstractBaseUser, PermissionsMixin):
 class CreatorUser(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     area = models.CharField(max_length=255)
-    instagram_connected = models.BooleanField(default=False)
-    youtube_connected = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.user.username} - {self.area}"
+    
+    @property
+    def instagram_connected(self):
+        return hasattr(self, 'ig_auth')
+
+    @property
+    def youtube_connected(self):
+        return hasattr(self, 'g_auth')
     
 
 class BusinessUser(models.Model):
@@ -64,21 +70,28 @@ class BusinessUser(models.Model):
         return f"{self.user.username} - {self.target_audience}"
     
     
-class FacebookAuth(models.Model):
-    owner = models.OneToOneField(CreatorUser, on_delete=models.CASCADE, related_name="fb_auth")
-    fb_user_id = models.CharField(max_length=255, db_index=True, unique=True)
-    long_lived_token = models.TextField()
+# class FacebookAuth(models.Model):
+#     owner = models.OneToOneField(CreatorUser, on_delete=models.CASCADE, related_name="fb_auth")
+#     fb_user_id = models.CharField(max_length=255, db_index=True, unique=True)
+#     long_lived_token = models.TextField()
     
     
-class FacebookPage(models.Model):
-    owner = models.ForeignKey(FacebookAuth, on_delete=models.CASCADE, related_name="fb_pages")
-    page_id = models.CharField(max_length=255, unique=True)
-    name = models.CharField(max_length=255)
-    page_access_token = models.TextField(blank=True, null=True)
+# class FacebookPage(models.Model):
+#     owner = models.ForeignKey(FacebookAuth, on_delete=models.CASCADE, related_name="fb_pages")
+#     page_id = models.CharField(max_length=255, unique=True)
+#     name = models.CharField(max_length=255)
+#     page_access_token = models.TextField(blank=True, null=True)
+    
+    
+class InstagramAuth(models.Model):
+    owner = models.OneToOneField(CreatorUser, on_delete=models.CASCADE, related_name="ig_auth")
+    ig_user_id = models.CharField(max_length=255, unique=True)
+    long_token = models.TextField(blank=True, null=True)
     
     
 class InstagramPage(models.Model):
-    fb_page = models.OneToOneField(FacebookPage, on_delete=models.CASCADE, related_name="ig_pages")
+    # fb_page = models.OneToOneField(FacebookPage, on_delete=models.CASCADE, related_name="ig_pages")
+    ig_auth = models.OneToOneField(InstagramAuth, on_delete=models.CASCADE, related_name="ig_page")
     ig_user_id = models.CharField(max_length=255, unique=True)
     username = models.CharField(max_length=255, blank=True)
     profile_picture_url = models.TextField(blank=True)

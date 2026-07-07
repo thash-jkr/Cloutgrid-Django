@@ -1,6 +1,7 @@
 *.sh
 .djenv
 Dockerfile
+.devcontainer/
 
 # Byte-compiled / optimized / DLL files
 *.py[cod]

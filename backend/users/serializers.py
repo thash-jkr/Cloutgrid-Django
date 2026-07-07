@@ -45,10 +45,18 @@ class UserSerializer(serializers.ModelSerializer):
 
 class CreatorUserSerializer(serializers.ModelSerializer):
     user = UserSerializer()
+    instagram_connected = serializers.SerializerMethodField()
+    youtube_connected = serializers.SerializerMethodField()
 
     class Meta:
         model = CreatorUser
         fields = ('user', 'area', 'instagram_connected', 'youtube_connected')
+
+    def get_instagram_connected(self, obj):
+        return obj.instagram_connected
+
+    def get_youtube_connected(self, obj):
+        return obj.youtube_connected
 
     def create(self, validated_data):
         user_data = validated_data.pop('user')
