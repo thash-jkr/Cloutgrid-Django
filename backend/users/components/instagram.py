@@ -140,9 +140,6 @@ class InstagramLoginCallbackView(APIView):
             },
         )
 
-        creator.instagram_connected = True
-        creator.save(update_fields=["instagram_connected"])
-
         if medium == "web":
             return HttpResponseRedirect(settings.IG_FRONTEND_REDIRECT_URI)
         else:

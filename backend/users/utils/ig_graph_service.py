@@ -31,6 +31,10 @@ def get_long_token(short_token):
 def graph_get(node, token, params=None):
     params = params or {}
     params["access_token"] = token
-    resp = requests.get(f"https://graph.instagram.com/{node}", params=params)
+    resp = requests.get(
+        f"https://graph.instagram.com/{node}", 
+        params=params,
+        headers={"Accept-Language": "en-US"}
+    )
     resp.raise_for_status()
     return resp.json()
