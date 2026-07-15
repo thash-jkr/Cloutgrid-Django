@@ -13,7 +13,12 @@ class JobListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        excluded = request.user.blockings.all() | request.user.blockers.all()
+        user = request.user
+        
+        if not hasattr(user, 'creatoruser'):
+            return Response({'message': 'Only creator users can fetch collabs'}, status=status.HTTP_403_FORBIDDEN)
+        
+        excluded = user.blockings.all() | user.blockers.all()
         jobs = Job.objects.exclude(posted_by__user__in=excluded)
         serializer = JobSerializer(jobs, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)

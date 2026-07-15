@@ -24,6 +24,7 @@ import PublicRoute from "./navigation/PublicRoute";
 import "./App.css";
 import NotFound from "./navigation/NotFound";
 import DeleteAccount from "./privacy/deleteAccount";
+import DataDeletionPolicy from "./misc/DataDeletion";
 
 function App() {
   const dispatch = useDispatch();
@@ -53,6 +54,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/privacypolicy" element={<PrivacyPolicy />} />
         <Route path="/eula" element={<EULA />} />
+        <Route path="/data-deletion" element={<DataDeletionPolicy />} />
 
         <Route element={<PublicRoute />}>
           <Route path="/login" element={<Login />} />

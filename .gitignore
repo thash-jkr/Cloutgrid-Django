@@ -6,3 +6,4 @@ docker-compose.prod.yml
 deploy.sh
 certbot/
 nginx/
+play_store/

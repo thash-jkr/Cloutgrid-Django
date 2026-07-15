@@ -39,9 +39,15 @@ const Footer = () => {
               <li className="transition-all duration-500 hover:scale-110 hover:text-orange-500">
                 <Link to={"/privacypolicy"}>Privacy Policy</Link>
               </li>
+
               <li className="transition-all duration-500 hover:scale-110 hover:text-orange-500">
                 <Link to={"/eula"}>Terms of Service</Link>
               </li>
+
+              <li className="transition-all duration-500 hover:scale-110 hover:text-orange-500">
+                <Link to={"/data-deletion"}>Data Deletion</Link>
+              </li>
+
               {/* <li>
               <a href="/">Careers</a>
             </li> */}
