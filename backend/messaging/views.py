@@ -82,7 +82,7 @@ class MessageListView(APIView):
             Conversation,
             Q(id=conversation_id) & Q(user_1=user) | Q(user_2=user),
         )
-        messages = Message.objects.filter(conversation=conversation).order_by("created_at")
+        messages = Message.objects.filter(conversation=conversation).order_by("-created_at")
         serializer = MessageSerializer(messages, many=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
