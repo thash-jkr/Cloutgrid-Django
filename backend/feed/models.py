@@ -12,6 +12,7 @@ class Post(models.Model):
     collaboration = models.ForeignKey(
         BusinessUser, on_delete=models.CASCADE, related_name="collaborations", blank=True, null=True)
     image = models.ImageField(upload_to='posts/')
+    aspect = models.CharField(max_length=4, default="1:1")
     caption = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
