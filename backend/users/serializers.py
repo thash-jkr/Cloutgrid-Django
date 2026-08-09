@@ -118,12 +118,15 @@ class BusinessUserSerializer(serializers.ModelSerializer):
 class NotificationSerializer(serializers.ModelSerializer):
     sender = serializers.StringRelatedField()
     recipient = serializers.StringRelatedField()
+    photo = serializers.SerializerMethodField()
 
     class Meta:
         model = Notification
-        fields = ['id', 'recipient', 'sender', 'notification_type',
-                  'message', 'is_read', 'created_at']
-        read_only_fields = ['created_at', 'recipient', 'sender']
+        fields = "__all__"
+        
+    def get_photo(self, obj):
+        photo = obj.sender.profile_photo
+        return photo.url if photo else None
 
 
 class OTPSerializer(serializers.Serializer):

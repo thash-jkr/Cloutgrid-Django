@@ -31,7 +31,15 @@ class PostListView(APIView):
     def post(self, request):
         user = request.user
         data = request.data
+        
+        aspect = data["aspect"]
         collab_username = data["collaboration"]
+        
+        if not aspect or aspect == "":
+            return Response(
+                {"message": "Image aspect not found!"},
+                status = status.HTTP_400_BAD_REQUEST
+            )
         
         if not data["caption"] or data["caption"] == "":
             return Response(
