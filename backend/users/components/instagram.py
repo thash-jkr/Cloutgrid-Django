@@ -240,7 +240,7 @@ class InstagramProfileReadView(APIView):
         try:
             ig = InstagramPage.objects.get(ig_auth=ig_auth)
         except ObjectDoesNotExist:
-            return Response({"message": "No Instagram page found"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "No Instagram page found. Please reload!"}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({"profile_data": model_to_dict(ig)}, status=status.HTTP_200_OK)
     

@@ -19,7 +19,7 @@ class JobListView(APIView):
             return Response({'message': 'Only creator users can fetch collabs'}, status=status.HTTP_403_FORBIDDEN)
         
         excluded = user.blockings.all() | user.blockers.all()
-        jobs = Job.objects.exclude(posted_by__user__in=excluded)
+        jobs = Job.objects.exclude(posted_by__user__in=excluded).order_by('-created_at')
         serializer = JobSerializer(jobs, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 

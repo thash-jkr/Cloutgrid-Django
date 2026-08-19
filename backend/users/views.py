@@ -1522,9 +1522,9 @@ class MarkNotificationAsReadView(APIView):
                 pk=pk, recipient=request.user)
             notification.is_read = True
             notification.save()
-            return Response({"status": "Notification marked as read"}, status=status.HTTP_200_OK)
+            return Response({"message": "Notification marked as read"}, status=status.HTTP_200_OK)
         except Notification.DoesNotExist:
-            return Response({"error": "Notification not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"message": "Notification not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 class GetAllUsersView(APIView):
