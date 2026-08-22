@@ -13,11 +13,7 @@ from .views import (
     MarkNotificationAsReadView, GetAllUsersView,
     SendOTPView, VerifyOTPView,
     PasswrdResetRequestView, PasswordResetConfirmView,
-    BusinessSearchView, GoogleLoginStartView,
-    GoogleLoginCallbackView, YoutubeChannelFetchView,
-    YoutubeChannelReadView, YoutubeMediaFetchView,
-    YoutubeMediaReadView, GoogleDisconnectView,
-    GoogleConnectionCheckView
+    BusinessSearchView, 
 )
 
 from .components.instagram import (
@@ -25,6 +21,14 @@ from .components.instagram import (
     InstagramProfileFetchView, InstagramProfileReadView,
     InstagramMediaFetchView, InstagramMediaReadView,
     InstagramDisconnectView
+)
+
+from .components.youtube import (
+    GoogleLoginStartView,
+    GoogleLoginCallbackView, YoutubeChannelFetchView,
+    YoutubeChannelReadView, YoutubeMediaFetchView,
+    YoutubeMediaReadView, GoogleDisconnectView,
+    GoogleConnectionCheckView
 )
 
 urlpatterns = [
@@ -60,17 +64,6 @@ urlpatterns = [
     
     path('password-reset/', PasswrdResetRequestView.as_view(), name='password-reset'),
     path('password-reset-confirm/<uidb64>/<token>/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
-    
-    # path('auth/facebook/start/', FacebookLoginStartView.as_view(), name='facebook-login-start'),
-    # path('auth/facebook/callback/', FacebookLoginCallbackView.as_view(), name='facebook-login-callback'),
-    # path('auth/facebook/deauthorize/', FacebookDisconnectView.as_view(), name='facebook-login-deauthorize'),
-    # path('auth/facebook/check/', FacebookConnectionCheckView.as_view(), name='facebook-login-check'),
-    # path('instagram/connect/', InstagramConnectView.as_view(), name='instagram-connect'),
-    # path('instagram/profile/fetch/', InstagramProfileFetchView.as_view(), name='instagram-profile-fetch'),
-    # path('instagram/profile/read/<str:username>/', InstagramProfileReadView.as_view(), name='instagram-profile-read'),
-    # path('instagram/media/fetch/', InstagramMediaFetchView.as_view(), name='instagram-media-fetch'),
-    # path('instagram/media/read/<str:username>/', InstagramMediaReadView.as_view(), name='instagram-media-read'),
-    # path('privacy/facebook/purge/', FacebookPurgeView.as_view(), name='facebook-data-delete'),
     
     path('auth/instagram/start/', InstagramLoginStartView.as_view(), name='instagram-login-start'),
     path('auth/instagram/callback/', InstagramLoginCallbackView.as_view(), name='instagram-login-callback'),
