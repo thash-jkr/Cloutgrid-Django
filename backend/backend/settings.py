@@ -47,7 +47,11 @@ G_SCOPES = env("G_SCOPES", default="")
 
 # Cron Jobs
 CRONJOBS = [
-    ("0 */6 * * *", "users.jobs.refresh_all_social_integrations"),
+    (
+        "0 */6 * * *",
+        "users.jobs.refresh_all_social_integrations",
+        ">> /app/logs/cron.log 2>&1",
+    ),
 ]
 
 
@@ -77,7 +81,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount",
     "messaging",
     "channels",
-    'django_crontab',
+    "django_crontab",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
