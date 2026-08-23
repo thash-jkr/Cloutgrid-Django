@@ -12,6 +12,8 @@ from django.http import HttpResponseRedirect, HttpResponseBadRequest, HttpRespon
 import datetime, secrets
 from urllib.parse import urlencode
 
+from users.serializers import InstagramPageSerializer
+
 from ..utils import ig_graph_service
 from ..models import (
     User,
@@ -234,7 +236,8 @@ class InstagramProfileReadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        return Response({"profile_data": model_to_dict(ig)}, status=status.HTTP_200_OK)
+        serializer = InstagramPageSerializer(ig)
+        return Response({"profile_data": serializer.data}, status=status.HTTP_200_OK)
 
 
 class InstagramMediaReadView(APIView):
