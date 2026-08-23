@@ -109,7 +109,7 @@ class InstagramMedia(models.Model):
     )
     media_id = models.CharField(max_length=255, unique=True)
     media_type = models.CharField(max_length=64)
-    media_url = models.TextField(blank=True, null=True)
+    media_url = models.TextField(blank=True, null=True, default="")
     thumbnail_url = models.TextField(blank=True, null=True, default="")
     link = models.TextField()
     caption = models.TextField()
