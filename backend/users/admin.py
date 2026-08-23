@@ -8,11 +8,16 @@ from .models import (
   InstagramAuth
 )
 
+
+@admin.register(InstagramPage)
+class InstagramPageAdmin(admin.ModelAdmin):
+    readonly_fields = ['last_synced_at']
+
+
 admin.site.register(User)
 admin.site.register(CreatorUser)
 admin.site.register(BusinessUser)
 admin.site.register(Notification)
-admin.site.register(InstagramPage)
 admin.site.register(InstagramMedia)
 admin.site.register(GoogleAuth)
 admin.site.register(YoutubeChannel)
