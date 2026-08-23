@@ -111,7 +111,7 @@ def refresh_instagram_media(ig_auth: InstagramAuth) -> None:
             defaults={
                 "owner": ig,
                 "media_type": media_info.get("media_type"),
-                "media_url": media_info.get("media_url"),
+                "media_url": media_info.get("media_url") or media_info.get("thumbnail_url"),
                 "thumbnail_url": media_info.get("thumbnail_url", ""),
                 "link": media_info.get("permalink"),
                 "caption": media_info.get("caption"),
