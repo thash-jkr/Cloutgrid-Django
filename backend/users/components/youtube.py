@@ -19,6 +19,7 @@ from ..models import (
     YoutubeChannel,
     YoutubeMedia,
 )
+from ..utils.social_refresh import refresh_youtube_channel, refresh_youtube_media
 
 
 class SchemeRedirectResponse(HttpResponse):
@@ -200,60 +201,62 @@ class YoutubeChannelFetchView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        g_auth = GoogleAuth.objects.get(owner=request.user.creatoruser)
+        try:
+            g_auth = GoogleAuth.objects.get(owner=request.user.creatoruser)
+        except (AttributeError, GoogleAuth.DoesNotExist):
+            return Response(
+                {"message": "Google account not connected"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
-            credentials = Credentials(
-                token=g_auth.access_token,
-                refresh_token=g_auth.refresh_token,
-                client_id=settings.G_CLIENT_ID,
-                client_secret=settings.G_CLIENT_SECRET,
-                token_uri="https://oauth2.googleapis.com/token",
-            )
-            youtube = build("youtube", "v3", credentials=credentials)
-
-            response = (
-                youtube.channels()
-                .list(part="snippet,statistics,brandingSettings", mine=True)
-                .execute()
-            )
-
-            if credentials.token != g_auth.access_token:
-                g_auth.access_token = credentials.token
-                g_auth.save()
-
-        except:
+            channel = refresh_youtube_channel(g_auth)
+        except Exception as e:
             return Response(
-                {"message": "Something went wrong"}, status=status.HTTP_400_BAD_REQUEST
+                {"message": f"Something went wrong - {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if not response["items"]:
+        if channel is None:
             return Response(
                 {"message": "No channel found"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        channel = response["items"][0]
-        snippet = channel["snippet"]
-        stats = channel["statistics"]
-        banner_url = (
-            channel.get("brandingSettings", {})
-            .get("image", {})
-            .get("bannerExternalUrl")
-        )
+        return Response({"connected": True}, status=status.HTTP_200_OK)
 
-        YoutubeChannel.objects.update_or_create(
-            owner=g_auth,
-            defaults={
-                "channel_id": channel["id"],
-                "title": snippet["title"],
-                "description": snippet.get("description", ""),
-                "profile_picture_url": snippet["thumbnails"]["default"]["url"],
-                "banner_url": banner_url,
-                "subscriber_count": stats.get("subscriberCount", 0),
-                "view_count": stats.get("viewCount", 0),
-                "video_count": stats.get("videoCount", 0),
-            },
-        )
+
+class YoutubeMediaFetchView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            creator = request.user.creatoruser
+        except AttributeError:
+            return Response(
+                {"message": "Only creator user can do this operation"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            g_auth = GoogleAuth.objects.get(owner=creator)
+        except GoogleAuth.DoesNotExist:
+            return Response(
+                {"message": "Google account not connected"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            refresh_youtube_media(g_auth)
+        except YoutubeChannel.DoesNotExist:
+            return Response(
+                {"message": "Youtube channel not found"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception as e:
+            return Response(
+                {"message": f"Something went wrong - {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         return Response({"connected": True}, status=status.HTTP_200_OK)
 
@@ -294,115 +297,6 @@ class YoutubeChannelReadView(APIView):
         }
 
         return Response({"channel_data": data}, status=status.HTTP_200_OK)
-
-
-class YoutubeMediaFetchView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        try:
-            creator = request.user.creatoruser
-        except CreatorUser.DoesNotExist:
-            return Response(
-                {"message": "Only creator user can do this operation"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        try:
-            g_auth = GoogleAuth.objects.get(owner=creator)
-            channel = g_auth.yt_channel
-        except GoogleAuth.DoesNotExist:
-            return Response(
-                {"message": "Google account not connected"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        except YoutubeChannel.DoesNotExist:
-            return Response(
-                {"message": "Youtube channel not found"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        try:
-            credentials = Credentials(
-                token=g_auth.access_token,
-                refresh_token=g_auth.refresh_token,
-                client_id=settings.G_CLIENT_ID,
-                client_secret=settings.G_CLIENT_SECRET,
-                token_uri="https://oauth2.googleapis.com/token",
-            )
-
-            if credentials.token != g_auth.access_token:
-                g_auth.access_token = credentials.token
-                g_auth.save()
-
-            youtube = build("youtube", "v3", credentials=credentials)
-
-            response = (
-                youtube.channels()
-                .list(part="contentDetails", id=channel.channel_id)
-                .execute()
-            )
-
-            uploads_playlist_id = response["items"][0]["contentDetails"][
-                "relatedPlaylists"
-            ]["uploads"]
-
-            playlist_items = (
-                youtube.playlistItems()
-                .list(
-                    part="snippet,contentDetails",
-                    playlistId=uploads_playlist_id,
-                    maxResults=5,
-                )
-                .execute()
-            )
-
-            video_ids = [
-                item["contentDetails"]["videoId"] for item in playlist_items["items"]
-            ]
-
-            videos_response = (
-                youtube.videos()
-                .list(part="snippet,statistics,contentDetails", id=",".join(video_ids))
-                .execute()
-            )
-
-            for item in videos_response.get("items", []):
-                vid = item["id"]
-                snippet = item["snippet"]
-                stats = item.get("statistics", {})
-                content = item.get("contentDetails", {})
-
-                thumbnails = snippet.get("thumbnails", {})
-                thumbnail_url = (
-                    thumbnails.get("maxres", {}).get("url")
-                    or thumbnails.get("standard", {}).get("url")
-                    or thumbnails.get("high", {}).get("url")
-                    or thumbnails.get("medium", {}).get("url")
-                    or thumbnails.get("default", {}).get("url")
-                )
-
-                YoutubeMedia.objects.update_or_create(
-                    owner=channel,
-                    media_id=vid,
-                    defaults={
-                        "title": snippet.get("title", ""),
-                        "description": snippet.get("description", ""),
-                        "thumbnail_url": thumbnail_url,
-                        "views": stats.get("viewCount", 0),
-                        "likes": stats.get("likeCount", 0),
-                        "comments": stats.get("commentCount", 0),
-                        "duration": content.get("duration", ""),
-                    },
-                )
-
-        except Exception as e:
-            return Response(
-                {"message": "Something went wrong" + e},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        return Response({"connected": True}, status=status.HTTP_200_OK)
 
 
 class YoutubeMediaReadView(APIView):

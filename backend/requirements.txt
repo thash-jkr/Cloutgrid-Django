@@ -27,3 +27,4 @@ redis==5.0.4
 daphne
 uvicorn
 websockets
+django-crontab

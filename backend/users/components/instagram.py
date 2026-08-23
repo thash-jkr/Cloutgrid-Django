@@ -20,6 +20,10 @@ from ..models import (
     InstagramMedia,
     InstagramAuth,
 )
+from ..utils.social_refresh import (
+    refresh_instagram_profile,
+    refresh_instagram_media,
+)
 
 
 class SchemeRedirectResponse(HttpResponse):
@@ -152,76 +156,49 @@ class InstagramProfileFetchView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        token = ig_auth.long_token
-
         try:
-            profile_data = ig_graph_service.graph_get(
-                "me",
-                token,
-                {
-                    "fields": "username,followers_count,follows_count,media_count,profile_picture_url"
-                },
-            )
+            refresh_instagram_profile(ig_auth)
         except Exception as e:
             return Response(
                 {"message": f"Error fetching Instagram profile details - {str(e)}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        since = int(
-            (
-                datetime.datetime.now(datetime.timezone.utc)
-                - datetime.timedelta(days=28)
-            ).timestamp()
-        )
+        return Response({"connected": True}, status=status.HTTP_200_OK)
 
+
+class InstagramMediaFetchView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
         try:
-            profile_insights = ig_graph_service.graph_get(
-                f"me/insights",
-                token,
-                {
-                    "metric": "reach,profile_views,accounts_engaged,total_interactions,views",
-                    "metric_type": "total_value",
-                    "period": "day",
-                    "since": since,
-                },
-            )
-        except Exception as e:
+            creator = request.user.creatoruser
+        except AttributeError:
             return Response(
-                {
-                    "message": f"Error fetching initial Instagram profile insights: {str(e)}"
-                },
+                {"message": "Only creator user can connect social accounts"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        ig, _ = InstagramPage.objects.get_or_create(
-            ig_auth=ig_auth,
-            defaults={
-                "ig_user_id": ig_auth.ig_user_id,
-                "username": profile_data.get("username", ""),
-                "profile_picture_url": profile_data.get("profile_picture_url", ""),
-            },
-        )
+        try:
+            ig_auth = InstagramAuth.objects.get(owner=creator)
+        except ObjectDoesNotExist:
+            return Response(
+                {"message": "Instagram is not connected"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        ig.username = profile_data.get("username", ig.username)
-        ig.profile_picture_url = profile_data.get(
-            "profile_picture_url", ig.profile_picture_url
-        )
-        ig.followers = profile_data.get("followers_count", ig.followers)
-        ig.followings = profile_data.get("follows_count", ig.followings)
-        ig.media_count = profile_data.get("media_count", ig.media_count)
-        ig.insights_raw = profile_insights.get("data", [])
-
-        ig.save(
-            update_fields=[
-                "username",
-                "profile_picture_url",
-                "followers",
-                "followings",
-                "media_count",
-                "insights_raw",
-            ]
-        )
+        try:
+            refresh_instagram_media(ig_auth)
+        except InstagramPage.DoesNotExist:
+            return Response(
+                {"message": "No Instagram page found"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception as e:
+            return Response(
+                {"message": f"Error fetching Instagram media - {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         return Response({"connected": True}, status=status.HTTP_200_OK)
 
@@ -258,81 +235,6 @@ class InstagramProfileReadView(APIView):
             )
 
         return Response({"profile_data": model_to_dict(ig)}, status=status.HTTP_200_OK)
-
-
-class InstagramMediaFetchView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        try:
-            creator = request.user.creatoruser
-        except AttributeError:
-            return Response(
-                {"message": "Only creator user can connect social accounts"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        try:
-            ig_auth = InstagramAuth.objects.get(owner=creator)
-        except ObjectDoesNotExist:
-            return Response(
-                {"message": "Instagram is not connected"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        try:
-            ig = InstagramPage.objects.get(ig_auth=ig_auth)
-        except ObjectDoesNotExist:
-            return Response(
-                {"message": "No Instagram page found"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        token = ig_auth.long_token
-
-        media = ig_graph_service.graph_get(
-            f"me/media",
-            token,
-            {
-                "limit": "5",
-            },
-        )
-        media_ids = [m["id"] for m in media.get("data", [])]
-
-        for m_id in media_ids:
-            media_info = ig_graph_service.graph_get(
-                f"{m_id}",
-                token,
-                {
-                    "fields": "id,media_type,media_url,thumbnail_url,permalink,caption,like_count,comments_count"
-                },
-            )
-
-            media_obj, _ = InstagramMedia.objects.update_or_create(
-                media_id=media_info.get("id"),
-                defaults={
-                    "owner": ig,
-                    "media_type": media_info.get("media_type"),
-                    "media_url": media_info.get("media_url"),
-                    "thumbnail_url": media_info.get("thumbnail_url", ""),
-                    "link": media_info.get("permalink"),
-                    "caption": media_info.get("caption"),
-                    "like_count": media_info.get("like_count", 0),
-                    "comments_count": media_info.get("comments_count", 0),
-                },
-            )
-
-            try:
-                media_insights = ig_graph_service.graph_get(
-                    f"{m_id}/insights", token, {"metric": "reach,views"}
-                )
-                media_obj.insights_raw = media_insights.get("data", [])
-            except Exception as _:
-                media_obj.insights_raw = []
-
-            media_obj.save()
-
-        return Response({"connected": True}, status=status.HTTP_200_OK)
 
 
 class InstagramMediaReadView(APIView):
