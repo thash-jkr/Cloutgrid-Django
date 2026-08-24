@@ -55,21 +55,41 @@ CRONJOBS = [
 ]
 
 
-# settings.py
+# Logging
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{asctime} {levelname} {name} - {message}",
+            "style": "{",
+        },
+    },
     "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
         "file": {
             "class": "logging.FileHandler",
             "filename": "/app/logs/django.log",
+            "formatter": "verbose",
         },
+    },
+    "root": {
+        "handlers": ["console", "file"],
+        "level": "INFO",
     },
     "loggers": {
         "django": {
-            "handlers": ["file"],
-            "level": "WARNING",
-            "propagate": True,
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "django.server": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
         },
     },
 }
