@@ -90,10 +90,16 @@ class GoogleLoginCallbackView(APIView):
                 {"message": "No code found!"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        txn = OAuthTransaction.objects.get(state=state)
-        if not txn:
+        try:
+            txn = OAuthTransaction.objects.get(state=state)
+        except OAuthTransaction.DoesNotExist:
             return Response(
                 {"message": "Invalid or already-used state"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except OAuthTransaction.MultipleObjectsReturned:
+            return Response(
+                {"message": "Invalid OAuth state"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -126,11 +132,12 @@ class GoogleLoginCallbackView(APIView):
             "grant_type": "authorization_code",
         }
 
-        response = requests.post(token_url, data=data)
-        if response.status_code != 200:
+        try:
+            response = requests.post(token_url, data=data, timeout=10)
+        except requests.RequestException:
             return Response(
-                {"message": "Failed to exchange code for token."},
-                status=status.HTTP_400_BAD_REQUEST,
+                {"message": "Failed to reach Google's token endpoint."},
+                status=status.HTTP_502_BAD_GATEWAY,
             )
 
         token_data = response.json()
