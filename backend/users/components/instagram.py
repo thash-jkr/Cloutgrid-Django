@@ -61,7 +61,7 @@ class InstagramLoginStartView(APIView):
             medium=medium,
         )
 
-        auth_url = "https://api.instagram.com/oauth/authorize?" + urlencode(
+        auth_url = "https://www.instagram.com/oauth/authorize?" + urlencode(
             {
                 "client_id": settings.IG_APP_ID,
                 "redirect_uri": settings.IG_REDIRECT_URI,
