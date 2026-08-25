@@ -95,7 +95,7 @@ def refresh_instagram_media(ig_auth: InstagramAuth) -> None:
     ig = InstagramPage.objects.get(ig_auth=ig_auth)
     token = ig_auth.long_token
 
-    media = ig_graph_service.graph_get("me/media", token, {"limit": "5"})
+    media = ig_graph_service.graph_get("me/media", token, {"limit": "10"})
     media_ids = [m["id"] for m in media.get("data", [])]
 
     for m_id in media_ids:

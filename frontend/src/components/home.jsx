@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import homeCCC from "../assets/home_ccc.png";
-import homeCreator from "../assets/—Pngtree—blogger review concept vetor creative_7689749.png"
+import homeCreator from "../assets/—Pngtree—blogger review concept vetor creative_7689749.png";
 import creatorCore from "../assets/creator_core.png";
 import collabCore from "../assets/collaboration_core.png";
 import iOSLogo from "../assets/app_store_logo.png";
@@ -28,7 +28,11 @@ const LoggedOutHome = () => {
               </div>
 
               <div className="flex lg:hidden justify-center items-center w-full mb-5">
-                <img src={homeCreator} alt="Home Right" className="w-3/4 h-auto" />
+                <img
+                  src={homeCreator}
+                  alt="Home Right"
+                  className="w-3/4 h-auto"
+                />
               </div>
 
               <div className="flex lg:hidden font-mono">
