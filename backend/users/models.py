@@ -39,7 +39,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
     bio = models.CharField(max_length=255, null=True, blank=True, default="")
-    user_type = models.CharField(max_length=10, null=True, blank=True)
+    type = models.CharField(max_length=10, null=True, blank=True)
     followers = models.ManyToManyField(
         "self", symmetrical=False, related_name="following", blank=True
     )
@@ -53,15 +53,15 @@ class User(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = ["username"]
 
     def __str__(self):
-        return f"{self.username} - {self.user_type}"
+        return f"{self.username} - {self.type}"
 
 
 class CreatorUser(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
-    area = models.CharField(max_length=255)
+    category = models.CharField(max_length=255)
 
     def __str__(self):
-        return f"{self.user.username} - {self.area}"
+        return f"{self.user.username} - {self.category}"
 
     @property
     def instagram_connected(self):
@@ -75,10 +75,10 @@ class CreatorUser(models.Model):
 class BusinessUser(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     website = models.CharField(max_length=255, blank=True, null=True, default="")
-    target_audience = models.CharField(max_length=255)
+    category = models.CharField(max_length=255)
 
     def __str__(self):
-        return f"{self.user.username} - {self.target_audience}"
+        return f"{self.user.username} - {self.category}"
 
 
 class InstagramAuth(models.Model):

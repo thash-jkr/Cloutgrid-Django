@@ -1,3 +1,5 @@
+import random
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -27,13 +29,17 @@ from .models import (
     Notification,
 )
 
+SUGGESTION_COUNT = 6
+
 
 # OTP verification and mail sending using zepto
 class SendOTPView(APIView):
     def post(self, request):
         serializer = OTPSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"message": "Invalid input"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         name = serializer.validated_data.get("name")
         username = serializer.validated_data.get("username")
@@ -99,14 +105,15 @@ class VerifyOTPView(APIView):
         return Response({"message": message}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class PasswrdResetRequestView(APIView):
+class ForgotPasswordView(APIView):
     def post(self, request):
         email = request.data.get("email")
+
         try:
             user = User.objects.get(email=email)
             token = default_token_generator.make_token(user)
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            reset_link = f"reset-password/{uid}/{token}"
+            uid = urlsafe_base64_encode(force_bytes(user.id))
+            reset_link = f"password/reset/{uid}/{token}"
             api_key = settings.ZEPTO_API_KEY
             template_key = settings.RESET_TEMPLATE_KEY
             placeholders = {
@@ -124,6 +131,7 @@ class PasswrdResetRequestView(APIView):
                     {"message": "Password reset link sent successfully"},
                     status=status.HTTP_200_OK,
                 )
+
             return Response(response, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except User.DoesNotExist:
             return Response(
@@ -132,7 +140,7 @@ class PasswrdResetRequestView(APIView):
             )
 
 
-class PasswordResetConfirmView(APIView):
+class ConfirmPasswordView(APIView):
     def post(self, request, uidb64, token):
         try:
             uid = urlsafe_base64_decode(uidb64).decode()
@@ -153,6 +161,27 @@ class PasswordResetConfirmView(APIView):
             return Response(
                 {"message": "Invalid user id"}, status=status.HTTP_400_BAD_REQUEST
             )
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        old_password = request.data.get("old_password")
+        new_password = request.data.get("new_password")
+
+        if not user.check_password(old_password):
+            return Response(
+                {"message": "Current password is incorrect"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(new_password)
+        user.save()
+        return Response(
+            {"message": "Password changed successfully"}, status=status.HTTP_200_OK
+        )
 
 
 class RegisterCreatorUserView(APIView):
@@ -284,7 +313,9 @@ class CreatorUserLoginView(APIView):
             {
                 "refresh": str(refresh),
                 "access": str(refresh.access_token),
-                "user": CreatorUserSerializer(creator_user).data,
+                "user": CreatorUserSerializer(
+                    creator_user, context={"request": request}
+                ).data,
             },
             status=status.HTTP_200_OK,
         )
@@ -317,7 +348,9 @@ class BusinessUserLoginView(APIView):
             {
                 "refresh": str(refresh),
                 "access": str(refresh.access_token),
-                "user": BusinessUserSerializer(business_user).data,
+                "user": BusinessUserSerializer(
+                    business_user, context={"request": request}
+                ).data,
             },
             status=status.HTTP_200_OK,
         )
@@ -345,12 +378,89 @@ class UserDetailView(APIView):
     def get(self, request):
         user = request.user
         if hasattr(user, "creatoruser"):
-            serializer = CreatorUserSerializer(user.creatoruser)
+            serializer = CreatorUserSerializer(
+                user.creatoruser, context={"request": request}
+            )
         elif hasattr(user, "businessuser"):
-            serializer = BusinessUserSerializer(user.businessuser)
+            serializer = BusinessUserSerializer(
+                user.businessuser, context={"request": request}
+            )
         else:
             serializer = UserSerializer(user)
         return Response(serializer.data)
+
+
+class SuggestionsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        try:
+            profile = user.creatoruser
+        except AttributeError:
+            try:
+                profile = user.businessuser
+            except AttributeError:
+                return Response(
+                    {"message": "No creator or business profile found for this user."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        user_category = profile.category
+
+        creator_pool = CreatorUser.objects.exclude(user=user).select_related("user")
+        business_pool = BusinessUser.objects.exclude(user=user).select_related("user")
+
+        matched_creators = list(
+            creator_pool.filter(category=user_category).order_by("?")[:SUGGESTION_COUNT]
+        )
+        matched_businesses = list(
+            business_pool.filter(category=user_category).order_by("?")[
+                :SUGGESTION_COUNT
+            ]
+        )
+
+        combined_matched = [("creator", c) for c in matched_creators] + [
+            ("business", b) for b in matched_businesses
+        ]
+        random.shuffle(combined_matched)
+        selected = combined_matched[:SUGGESTION_COUNT]
+
+        if len(selected) < SUGGESTION_COUNT:
+            remaining = SUGGESTION_COUNT - len(selected)
+
+            fallback_creators = list(
+                creator_pool.exclude(pk__in=[c.pk for c in matched_creators]).order_by(
+                    "?"
+                )[:remaining]
+            )
+            fallback_businesses = list(
+                business_pool.exclude(
+                    pk__in=[b.pk for b in matched_businesses]
+                ).order_by("?")[:remaining]
+            )
+
+            combined_fallback = [("creator", c) for c in fallback_creators] + [
+                ("business", b) for b in fallback_businesses
+            ]
+            random.shuffle(combined_fallback)
+            selected += combined_fallback[:remaining]
+
+        creators = [item for kind, item in selected if kind == "creator"]
+        businesses = [item for kind, item in selected if kind == "business"]
+
+        creator_data = CreatorUserSerializer(
+            creators, many=True, context={"request": request}
+        ).data
+        business_data = BusinessUserSerializer(
+            businesses, many=True, context={"request": request}
+        ).data
+
+        return Response(
+            list(creator_data) + list(business_data),
+            status=status.HTTP_200_OK,
+        )
 
 
 class CreatorUserProfileView(APIView):
@@ -359,7 +469,9 @@ class CreatorUserProfileView(APIView):
     def get(self, request):
         user = request.user
         if hasattr(user, "creatoruser"):
-            serializer = CreatorUserSerializer(user.creatoruser)
+            serializer = CreatorUserSerializer(
+                user.creatoruser, context={"request": request}
+            )
             return Response(serializer.data)
         return Response(
             {"error": "Not a creator user"}, status=status.HTTP_400_BAD_REQUEST
@@ -371,11 +483,11 @@ class CreatorUserProfileView(APIView):
             creator_user = user.creatoruser
             data = request.data
             user_data = {
-                "name": data.get("user[name]"),
-                "bio": data.get("user[bio]"),
+                "name": data.get("name"),
+                "bio": data.get("bio"),
             }
 
-            profile_photo = data.get("user[profile_photo]", None)
+            profile_photo = data.get("profile_photo", None)
             if profile_photo is not None:
                 user_data["profile_photo"] = profile_photo
 
@@ -388,16 +500,15 @@ class CreatorUserProfileView(APIView):
                 )
 
             creator_serializer = CreatorUserSerializer(
-                creator_user, data={"area": data.get("area")}, partial=True
+                creator_user,
+                data={"category": data.get("category")},
+                partial=True,
+                context={"request": request},
             )
 
             if creator_serializer.is_valid():
                 creator_serializer.save()
-                response_data = {
-                    "user": user_serializer.data,
-                    "area": creator_serializer.data.get("area"),
-                }
-                return Response(response_data, status=status.HTTP_200_OK)
+                return Response(creator_serializer.data, status=status.HTTP_200_OK)
             else:
                 return Response(
                     creator_serializer.errors, status=status.HTTP_400_BAD_REQUEST
@@ -414,7 +525,9 @@ class BusinessUserProfileView(APIView):
     def get(self, request):
         user = request.user
         if hasattr(user, "businessuser"):
-            serializer = BusinessUserSerializer(user.businessuser)
+            serializer = BusinessUserSerializer(
+                user.businessuser, context={"request": request}
+            )
             return Response(serializer.data)
         return Response({"error": "Not a business user"}, status=400)
 
@@ -424,11 +537,11 @@ class BusinessUserProfileView(APIView):
             business_user = user.businessuser
             data = request.data
             user_data = {
-                "name": data.get("user[name]"),
-                "bio": data.get("user[bio]"),
+                "name": data.get("name"),
+                "bio": data.get("bio"),
             }
 
-            profile_photo = data.get("user[profile_photo]", None)
+            profile_photo = data.get("profile_photo", None)
             if profile_photo is not None:
                 user_data["profile_photo"] = profile_photo
 
@@ -444,7 +557,7 @@ class BusinessUserProfileView(APIView):
                 business_user,
                 data={
                     "website": data.get("website"),
-                    "target_audience": data.get("target_audience"),
+                    "category": data.get("category"),
                 },
                 partial=True,
             )
@@ -454,7 +567,7 @@ class BusinessUserProfileView(APIView):
                 response_data = {
                     "user": user_serializer.data,
                     "website": business_serializer.data.get("website"),
-                    "target_audience": business_serializer.data.get("target_audience"),
+                    "category": business_serializer.data.get("category"),
                 }
                 return Response(response_data, status=status.HTTP_200_OK)
             else:
@@ -484,8 +597,12 @@ class UserSearchView(APIView):
         creators = CreatorUser.objects.filter(user__in=users)
         businesses = BusinessUser.objects.filter(user__in=users)
 
-        creator_serializer = CreatorUserSerializer(creators, many=True)
-        business_serializer = BusinessUserSerializer(businesses, many=True)
+        creator_serializer = CreatorUserSerializer(
+            creators, many=True, context={"request": request}
+        )
+        business_serializer = BusinessUserSerializer(
+            businesses, many=True, context={"request": request}
+        )
 
         return Response(
             {
@@ -524,11 +641,13 @@ class ProfileView(APIView):
 
         try:
             creator = CreatorUser.objects.get(user=user)
-            serializer = CreatorUserSerializer(creator)
+            serializer = CreatorUserSerializer(creator, context={"request": request})
         except CreatorUser.DoesNotExist:
             try:
                 business = BusinessUser.objects.get(user=user)
-                serializer = BusinessUserSerializer(business)
+                serializer = BusinessUserSerializer(
+                    business, context={"request": request}
+                )
             except BusinessUser.DoesNotExist:
                 return Response(
                     {"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND
@@ -640,15 +759,6 @@ class UnblockUserView(APIView):
         )
 
 
-class IsFollowingView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, username):
-        user_to_check = get_object_or_404(User, username=username)
-        is_following = request.user.following.filter(id=user_to_check.id).exists()
-        return Response({"is_following": is_following}, status=status.HTTP_200_OK)
-
-
 class NotificationListView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -661,7 +771,9 @@ class NotificationListView(APIView):
                 recipient=request.user, is_read=False
             ).order_by("-created_at")
         )
-        serializer = NotificationSerializer(notifications, many=True)
+        serializer = NotificationSerializer(
+            notifications, many=True, context={"request": request}
+        )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -680,20 +792,3 @@ class MarkNotificationAsReadView(APIView):
             return Response(
                 {"message": "Notification not found"}, status=status.HTTP_404_NOT_FOUND
             )
-
-
-class GetAllUsersView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        creators = CreatorUser.objects.exclude(user=request.user)
-        businesses = BusinessUser.objects.exclude(user=request.user)
-        creator_serializer = CreatorUserSerializer(creators, many=True)
-        business_serializer = BusinessUserSerializer(businesses, many=True)
-        return Response(
-            {
-                "creators": creator_serializer.data,
-                "businesses": business_serializer.data,
-            },
-            status=status.HTTP_200_OK,
-        )

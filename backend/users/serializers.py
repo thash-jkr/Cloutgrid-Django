@@ -20,7 +20,7 @@ class UserSerializer(serializers.ModelSerializer):
             "username",
             "profile_photo",
             "bio",
-            "user_type",
+            "type",
             "password",
             "followers_count",
             "following_count",
@@ -32,6 +32,22 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_following_count(self, obj):
         return obj.following.count()
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+
+        if isinstance(self.parent, (CreatorUserSerializer, BusinessUserSerializer)):
+            return rep
+
+        if hasattr(instance, "creatoruser"):
+            rep["category"] = instance.creatoruser.category
+            rep["instagram_connected"] = instance.creatoruser.instagram_connected
+            rep["youtube_connected"] = instance.creatoruser.youtube_connected
+        elif hasattr(instance, "businessuser"):
+            rep["category"] = instance.businessuser.category
+            rep["website"] = instance.businessuser.website
+
+        return rep
 
     def update(self, instance, validated_data):
         password = validated_data.pop("password", None)
@@ -62,7 +78,7 @@ class CreatorUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CreatorUser
-        fields = ("user", "area", "instagram_connected", "youtube_connected")
+        fields = ("user", "category", "instagram_connected", "youtube_connected")
 
     def get_instagram_connected(self, obj):
         return obj.instagram_connected
@@ -70,9 +86,14 @@ class CreatorUserSerializer(serializers.ModelSerializer):
     def get_youtube_connected(self, obj):
         return obj.youtube_connected
 
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        user_rep = rep.pop("user")
+        return {**user_rep, **rep}
+
     def create(self, validated_data):
         user_data = validated_data.pop("user")
-        user_data["user_type"] = "creator"
+        user_data["type"] = "creator"
         user = User.objects.create_user(**user_data)
         creator_user = CreatorUser.objects.create(user=user, **validated_data)
         return creator_user
@@ -88,7 +109,7 @@ class CreatorUserSerializer(serializers.ModelSerializer):
             else:
                 raise serializers.ValidationError(user_serializer.errors)
 
-        instance.area = validated_data.get("area", instance.area)
+        instance.category = validated_data.get("category", instance.category)
         instance.save()
         return instance
 
@@ -98,11 +119,16 @@ class BusinessUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BusinessUser
-        fields = ("user", "website", "target_audience")
+        fields = ("user", "website", "category")
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        user_rep = rep.pop("user")
+        return {**user_rep, **rep}
 
     def create(self, validated_data):
         user_data = validated_data.pop("user")
-        user_data["user_type"] = "business"
+        user_data["type"] = "business"
         user = User.objects.create_user(**user_data)
         business_user = BusinessUser.objects.create(user=user, **validated_data)
         return business_user
@@ -127,9 +153,7 @@ class BusinessUserSerializer(serializers.ModelSerializer):
                 }
             )
         instance.website = validated_data.get("website", instance.website)
-        instance.target_audience = validated_data.get(
-            "target_audience", instance.target_audience
-        )
+        instance.category = validated_data.get("category", instance.category)
         instance.save()
         return instance
 
@@ -145,7 +169,10 @@ class NotificationSerializer(serializers.ModelSerializer):
 
     def get_photo(self, obj):
         photo = obj.sender.profile_photo
-        return photo.url if photo else None
+        if not photo:
+            return None
+        request = self.context.get("request")
+        return request.build_absolute_uri(photo.url) if request else photo.url
 
 
 class OTPSerializer(serializers.Serializer):

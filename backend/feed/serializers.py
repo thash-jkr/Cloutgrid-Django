@@ -8,16 +8,16 @@ User = get_user_model()
 
 
 class PostSerializer(serializers.ModelSerializer):
-    author = UserSerializer(read_only=True)
     collaboration = BusinessUserSerializer(read_only=True)
     like_count = serializers.ReadOnlyField()
     comment_count = serializers.ReadOnlyField()
     is_liked = serializers.SerializerMethodField()
     posted_by = serializers.SerializerMethodField()
+    is_owner = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
-        fields = '__all__'
+        exclude = ("author",)
 
     def get_is_liked(self, obj):
         request = self.context.get('request')
@@ -27,9 +27,16 @@ class PostSerializer(serializers.ModelSerializer):
     
     def get_posted_by(self, obj):
         if hasattr(obj.author, "creatoruser"):
-            return CreatorUserSerializer(obj.author.creatoruser).data
+            return CreatorUserSerializer(obj.author.creatoruser, context=self.context).data
         else:
-            return BusinessUserSerializer(obj.author.businessuser).data
+            return BusinessUserSerializer(obj.author.businessuser, context=self.context).data
+        
+    def get_is_owner(self, obj):
+        request = self.context.get('request')
+        user = request.user
+        if request and user.is_authenticated:
+            return obj.author.username == user.username
+        return False
 
 
 class LikeSerializer(serializers.ModelSerializer):

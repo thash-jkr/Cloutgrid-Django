@@ -13,17 +13,26 @@ from .serializers import ConversationSerializer, MessageSerializer
 
 User = get_user_model()
 
-# Create your views here.
+
+class MessagePagination(CursorPagination):
+    page_size = 20
+    ordering = "-created_at"
+
+
 class ConversationListView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
         user = request.user
 
-        conversations = Conversation.objects.filter(
-            Q(user_1=user) | Q(user_2=user)
-        ).select_related("user_1", "user_2").order_by("-updated_at")
-        serializer = ConversationSerializer(conversations, many=True, context={"user": user})
+        conversations = (
+            Conversation.objects.filter(Q(user_1=user) | Q(user_2=user))
+            .select_related("user_1", "user_2")
+            .order_by("-updated_at")
+        )
+        serializer = ConversationSerializer(
+            conversations, many=True, context={"user": user, "request": request}
+        )
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -49,7 +58,9 @@ class ConversationDetailView(APIView):
             user_1_id=user_1_id,
             user_2_id=user_2_id,
         )
-        serializer = ConversationSerializer(conversation, context={"user": user})
+        serializer = ConversationSerializer(
+            conversation, context={"user": user, "request": request}
+        )
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -82,10 +93,16 @@ class MessageListView(APIView):
             Conversation,
             Q(id=conversation_id) & Q(user_1=user) | Q(user_2=user),
         )
-        messages = Message.objects.filter(conversation=conversation).order_by("-created_at")
-        serializer = MessageSerializer(messages, many=True)
 
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        paginator = MessagePagination()
+        paginated_messages = paginator.paginate_queryset(
+            Message.objects.filter(conversation=conversation).order_by("-created_at"),
+            request,
+        )
+
+        serializer = MessageSerializer(paginated_messages, many=True)
+
+        return paginator.get_paginated_response(serializer.data)
 
 
 class MessageDetailView(APIView):
@@ -96,7 +113,10 @@ class MessageDetailView(APIView):
 
         content = request.data.get("content")
         if not content or content.strip() == "":
-            return Response({"message": "Message content cannot be empty"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"message": "Message content cannot be empty"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         conversation = get_object_or_404(
             Conversation,
