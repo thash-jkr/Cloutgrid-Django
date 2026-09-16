@@ -3,7 +3,10 @@ palette.pdf
 /docs
 /builds
 docker-compose.prod.yml
+docker-compose.yml
 deploy.sh
 certbot/
 nginx/
 play_store/
+.env
+.venv/
