@@ -99,7 +99,9 @@ class InstagramPage(models.Model):
     followers = models.IntegerField(default=0)
     followings = models.IntegerField(default=0)
     media_count = models.IntegerField(default=0)
-    insights_raw = models.JSONField(blank=True, null=True)
+    insights = models.JSONField(default=list)
+    reach = models.JSONField(default=list)
+    media_insights = models.JSONField(default=list)
     last_synced_at = models.DateTimeField(auto_now=True)
 
 
@@ -115,7 +117,8 @@ class InstagramMedia(models.Model):
     caption = models.TextField()
     like_count = models.IntegerField(default=0)
     comments_count = models.IntegerField(default=0)
-    insights_raw = models.JSONField(blank=True, null=True)
+    views = models.IntegerField(default=0)
+    timestamp = models.DateTimeField(blank=True, null=True)
 
 
 class GoogleAuth(models.Model):

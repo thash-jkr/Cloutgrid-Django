@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.core.handlers import exception
 from rest_framework import serializers
 from better_profanity import profanity
 
@@ -74,17 +75,46 @@ class UserSerializer(serializers.ModelSerializer):
 class CreatorUserSerializer(serializers.ModelSerializer):
     user = UserSerializer()
     instagram_connected = serializers.SerializerMethodField()
+    instagram_followers = serializers.SerializerMethodField()
     youtube_connected = serializers.SerializerMethodField()
+    youtube_subscribers = serializers.SerializerMethodField()
 
     class Meta:
         model = CreatorUser
-        fields = ("user", "category", "instagram_connected", "youtube_connected")
+        fields = (
+            "user",
+            "category",
+            "instagram_connected",
+            "youtube_connected",
+            "instagram_followers",
+            "youtube_subscribers",
+        )
 
     def get_instagram_connected(self, obj):
         return obj.instagram_connected
 
+    def get_instagram_followers(self, obj):
+        if obj.instagram_connected:
+            try:
+                followers_count = obj.ig_auth.ig_page.followers
+                return followers_count
+            except:
+                print(f"Error occurred while fetching Instagram followers")
+                return None
+        return None
+
     def get_youtube_connected(self, obj):
         return obj.youtube_connected
+
+    def get_youtube_subscribers(self, obj):
+        if obj.youtube_connected:
+            try:
+                subscribers_count = obj.g_auth.yt_channel.subscriber_count
+                return subscribers_count
+            except:
+                print(f"Error occurred while fetching YouTube subscribers")
+                return None
+        return None
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)

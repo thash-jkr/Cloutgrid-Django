@@ -271,7 +271,7 @@ class InstagramMediaReadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        media = InstagramMedia.objects.filter(owner=ig).order_by("-id")[:10]
+        media = InstagramMedia.objects.filter(owner=ig).order_by("-timestamp")[:6:-1]
         media_data = [model_to_dict(m) for m in media]
         media_data.reverse()
 
