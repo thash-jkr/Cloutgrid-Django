@@ -11,3 +11,4 @@ play_store/
 .env
 .venv/
 Dockerfile
+logs/
