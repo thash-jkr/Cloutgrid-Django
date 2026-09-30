@@ -11164,3 +11164,23 @@ LINE 1: ...ts_count", "users_instagrammedia"."insights_raw", "users_ins...
 2026-09-30 09:05:32,554 INFO daphne.server - HTTP/2 support not enabled (install the http2 and tls Twisted extras)
 2026-09-30 09:05:32,554 INFO daphne.server - Configuring endpoint tcp:port=8000:interface=0.0.0.0
 2026-09-30 09:05:32,554 INFO daphne.server - Listening on TCP address 0.0.0.0:8000
+2026-09-30 10:13:27,243 INFO django.utils.autoreload - Watching for file changes with StatReloader
+2026-09-30 10:13:27,483 INFO daphne.server - HTTP/2 support not enabled (install the http2 and tls Twisted extras)
+2026-09-30 10:13:27,483 INFO daphne.server - Configuring endpoint tcp:port=8000:interface=0.0.0.0
+2026-09-30 10:13:27,484 INFO daphne.server - Listening on TCP address 0.0.0.0:8000
+2026-09-30 10:13:35,453 INFO django.channels.server - HTTP OPTIONS /token/refresh/ 200 [0.00, 192.168.65.1:27043]
+2026-09-30 10:13:35,487 INFO django.channels.server - HTTP POST /token/refresh/ 200 [0.03, 192.168.65.1:27043]
+2026-09-30 10:13:35,512 INFO django.channels.server - HTTP OPTIONS /posts/ 200 [0.00, 192.168.65.1:27043]
+2026-09-30 10:13:35,512 INFO django.channels.server - HTTP OPTIONS /notifications/?all=false/ 200 [0.00, 192.168.65.1:21623]
+2026-09-30 10:13:35,513 INFO django.channels.server - HTTP OPTIONS /posts/ 200 [0.00, 192.168.65.1:18040]
+2026-09-30 10:13:35,513 INFO django.channels.server - HTTP OPTIONS /notifications/?all=false/ 200 [0.00, 192.168.65.1:34611]
+2026-09-30 10:13:35,540 INFO django.channels.server - HTTP GET /notifications/?all=false/ 200 [0.03, 192.168.65.1:21623]
+2026-09-30 10:13:35,564 INFO django.channels.server - HTTP GET /notifications/?all=false/ 200 [0.02, 192.168.65.1:34611]
+2026-09-30 10:13:35,583 INFO django.channels.server - HTTP GET /media/profile_pics/profile_KyJEIJA.jpg 304 [0.01, 192.168.65.1:37180]
+2026-09-30 10:13:35,583 INFO django.channels.server - HTTP GET /media/profile_pics/profile_Njvc3tn.jpg 304 [0.01, 192.168.65.1:53635]
+2026-09-30 10:13:35,586 INFO django.channels.server - HTTP GET /posts/ 200 [0.07, 192.168.65.1:27043]
+2026-09-30 10:13:35,589 INFO django.channels.server - HTTP GET /media/profile_pics/image_yWNIlQy.jpg 304 [0.01, 192.168.65.1:36134]
+2026-09-30 10:13:35,628 INFO django.channels.server - HTTP GET /posts/ 200 [0.04, 192.168.65.1:34611]
+2026-09-30 10:13:35,640 INFO django.channels.server - HTTP GET /media/posts/post_WfXahop.jpg 304 [0.00, 192.168.65.1:53635]
+2026-09-30 10:13:35,645 INFO django.channels.server - HTTP GET /media/posts/post_vUGjNa6.jpg 200 [0.01, 192.168.65.1:36134]
+2026-09-30 10:13:35,661 INFO django.channels.server - HTTP GET /media/posts/profile_UPXC28S.jpg 200 [0.01, 192.168.65.1:53635]
