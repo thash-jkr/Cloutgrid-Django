@@ -1,7 +1,7 @@
 palette.pdf
 .DS_Store
-/docs
-/builds
+docs/
+builds/
 docker-compose.prod.yml
 docker-compose.yml
 deploy.sh
@@ -12,3 +12,5 @@ play_store/
 .venv/
 Dockerfile
 logs/
+media/
+static/
