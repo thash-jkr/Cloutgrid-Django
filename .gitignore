@@ -10,3 +10,4 @@ nginx/
 play_store/
 .env
 .venv/
+Dockerfile
